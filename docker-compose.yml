@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mining_dashboard
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgres://user:password@postgres:5432/mining_dashboard
+      - JWT_SECRET=your_super_secret_jwt_key
+    depends_on:
+      - postgres
+    command: sh -c "npx knex migrate:latest && npx knex seed:run && npm start"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  tunnel:
+    image: node:18-alpine
+    command: sh -c "npm install -g localtunnel && lt --port 80 --local-host frontend --subdomain mining-dash-hari"
+    restart: unless-stopped
+    depends_on:
+      - frontend
+
+volumes:
+  postgres_data:

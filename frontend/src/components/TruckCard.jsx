@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, PenTool as Tool, Navigation, AlertCircle } from 'lucide-react';
+import { Truck, Wrench, Navigation, AlertCircle } from 'lucide-react';
 
 const TruckCard = ({ vehicle, onClick }) => {
     const isTruck = vehicle.type === 'truck';
@@ -17,11 +17,11 @@ const TruckCard = ({ vehicle, onClick }) => {
             <div className="flex justify-between items-start mb-4">
                 <div className={`p-3 rounded-lg ${isTruck ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
                     }`}>
-                    {isTruck ? <Truck size={24} /> : <Tool size={24} />}
+                    {isTruck ? <Truck size={24} /> : <Wrench size={24} />}
                 </div>
                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${vehicle.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
                     }`}>
                     {vehicle.status}
                 </span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { ArrowLeft, Save, Truck, Tool, Activity, MapPin, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Truck, Wrench, Activity, MapPin, Calendar, FileText } from 'lucide-react';
 
 const TruckDetails = () => {
     const { id } = useParams();
@@ -110,7 +110,7 @@ const TruckDetails = () => {
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center text-center">
                         <div className={`w-32 h-32 rounded-full mb-4 flex items-center justify-center border-4 border-slate-50 ${isTruck ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
                             }`}>
-                            {isTruck ? <Truck size={64} /> : <Tool size={64} />}
+                            {isTruck ? <Truck size={64} /> : <Wrench size={64} />}
                         </div>
 
                         <div className="mb-4 w-full">
@@ -125,8 +125,8 @@ const TruckDetails = () => {
                                 {formData.type}
                             </span>
                             <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${formData.status === 'active'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
                                 {formData.status}
                             </span>

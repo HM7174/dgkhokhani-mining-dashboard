@@ -1,16 +1,11 @@
-services:
-  # PostgreSQL Database
-  - type: pserv
-    name: mining-dashboard-db
-    env: docker
+databases:
+  - name: mining-dashboard-db
+    databaseName: mining_dashboard
+    user: mining_user
     plan: free
     region: oregon
-    dockerfilePath: ./Dockerfile.postgres
-    databases:
-      - name: mining_dashboard
-        databaseName: mining_dashboard
-        user: mining_user
 
+services:
   # Backend API
   - type: web
     name: mining-dashboard-backend

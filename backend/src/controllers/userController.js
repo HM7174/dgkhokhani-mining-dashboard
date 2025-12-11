@@ -55,7 +55,9 @@ const createUser = async (req, res) => {
             .returning(['id', 'username', 'role', 'created_at']);
 
         // Audit log
-        await auditLogger.log(req.user.id, 'create_user', 'users', newUser.id, {
+        await auditLogger.logAction(req.user.id, 'create_user', {
+            target: 'users',
+            target_id: newUser.id,
             username: newUser.username,
             role: newUser.role
         });
@@ -110,7 +112,11 @@ const updateUser = async (req, res) => {
             .returning(['id', 'username', 'role', 'created_at', 'last_login']);
 
         // Audit log
-        await auditLogger.log(req.user.id, 'update_user', 'users', id, updateData);
+        await auditLogger.logAction(req.user.id, 'update_user', {
+            target: 'users',
+            target_id: id,
+            ...updateData
+        });
 
         res.json(updatedUser);
     } catch (error) {
@@ -139,7 +145,9 @@ const deleteUser = async (req, res) => {
         await db('users').where({ id }).del();
 
         // Audit log
-        await auditLogger.log(req.user.id, 'delete_user', 'users', id, {
+        await auditLogger.logAction(req.user.id, 'delete_user', {
+            target: 'users',
+            target_id: id,
             username: user.username,
             role: user.role
         });
@@ -181,7 +189,9 @@ const changePassword = async (req, res) => {
             .update({ password_hash });
 
         // Audit log
-        await auditLogger.log(req.user.id, 'change_password', 'users', id, {
+        await auditLogger.logAction(req.user.id, 'change_password', {
+            target: 'users',
+            target_id: id,
             username: user.username
         });
 

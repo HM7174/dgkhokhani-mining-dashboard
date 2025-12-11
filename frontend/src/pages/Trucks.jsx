@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import Table from '../components/Table';
 import Modal from '../components/Modal';
-import { Plus, Search } from 'lucide-react';
+import TruckCard from '../components/TruckCard';
+import { Plus, Search, Filter } from 'lucide-react';
 
 const TrucksPage = () => {
+    const navigate = useNavigate();
     const [trucks, setTrucks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,6 +14,10 @@ const TrucksPage = () => {
         name: '', type: 'truck', registration_number: '', site_id: '', status: 'active'
     });
     const [sites, setSites] = useState([]);
+
+    // Filtering and Search State
+    const [filterType, setFilterType] = useState('all'); // 'all', 'truck', 'machine'
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchTrucks();
@@ -51,41 +57,84 @@ const TrucksPage = () => {
         }
     };
 
-    const columns = [
-        { header: 'Name', accessor: 'name' },
-        { header: 'Type', accessor: 'type', render: (row) => <span className="capitalize">{row.type}</span> },
-        { header: 'Registration', accessor: 'registration_number' },
-        { header: 'Site', accessor: 'site_name' },
-        {
-            header: 'Status',
-            accessor: 'status',
-            render: (row) => (
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${row.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                    {row.status}
-                </span>
-            )
-        },
-        { header: 'Total Km', accessor: 'total_km', render: (row) => `${row.total_km} km` },
-    ];
+    const handleCardClick = (truck) => {
+        navigate(`/trucks/${truck.id}`);
+    };
+
+    // Filter Logic
+    const filteredTrucks = trucks.filter(truck => {
+        const matchesType = filterType === 'all' || truck.type === filterType;
+        const matchesSearch =
+            truck.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (truck.registration_number && truck.registration_number.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesType && matchesSearch;
+    });
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h1 className="text-2xl font-bold text-slate-800">Trucks & Machines</h1>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
                 >
                     <Plus size={20} />
                     <span>Add Vehicle</span>
                 </button>
             </div>
 
+            {/* Filters and Search Bar */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto">
+                    {['all', 'truck', 'machine'].map((type) => (
+                        <button
+                            key={type}
+                            onClick={() => setFilterType(type)}
+                            className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-all flex-1 md:flex-none ${filterType === type
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            {type === 'all' ? 'All Vehicles' : type === 'truck' ? 'Trucks' : 'Machinery'}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="relative w-full md:w-72">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search by name or number plate..."
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
+
             {loading ? (
-                <div className="text-center py-10">Loading...</div>
+                <div className="text-center py-20 text-slate-500">Loading vehicles...</div>
+            ) : filteredTrucks.length === 0 ? (
+                <div className="text-center py-20 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                    <Filter className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+                    <p className="text-slate-500 font-medium">No vehicles found matching your filters</p>
+                    <button
+                        onClick={() => { setFilterType('all'); setSearchQuery(''); }}
+                        className="mt-2 text-blue-600 hover:underline text-sm"
+                    >
+                        Clear filters
+                    </button>
+                </div>
             ) : (
-                <Table columns={columns} data={trucks} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredTrucks.map((truck) => (
+                        <TruckCard
+                            key={truck.id}
+                            vehicle={truck}
+                            onClick={handleCardClick}
+                        />
+                    ))}
+                </div>
             )}
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Vehicle">

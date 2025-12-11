@@ -12,6 +12,7 @@ import SitesPage from './pages/Sites';
 import FuelPage from './pages/Fuel';
 import AttendancePage from './pages/Attendance';
 import AuditLogsPage from './pages/AuditLogs';
+import UsersPage from './pages/Users';
 
 function App() {
     return (
@@ -29,6 +30,7 @@ function App() {
                             <Route path="/sites" element={<SitesPage />} />
                             <Route path="/fuel" element={<FuelPage />} />
                             <Route path="/attendance" element={<AttendancePage />} />
+                            <Route path="/users" element={<UsersPage />} />
                             <Route path="/audit" element={<AuditLogsPage />} />
                         </Route>
                     </Route>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Truck, Users, MapPin, Fuel, CalendarCheck, LogOut, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Truck, Users as DriversIcon, MapPin, Fuel, CalendarCheck, LogOut, ShieldAlert, UserCog } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
 
@@ -11,13 +11,14 @@ const Sidebar = () => {
     const navItems = [
         { label: 'Dashboard', path: '/', icon: LayoutDashboard },
         { label: 'Trucks & Machines', path: '/trucks', icon: Truck },
-        { label: 'Drivers', path: '/drivers', icon: Users },
+        { label: 'Drivers', path: '/drivers', icon: DriversIcon },
         { label: 'Sites', path: '/sites', icon: MapPin },
         { label: 'Fuel Logs', path: '/fuel', icon: Fuel },
         { label: 'Attendance', path: '/attendance', icon: CalendarCheck },
     ];
 
     if (user?.role === 'admin') {
+        navItems.push({ label: 'Users', path: '/users', icon: UserCog });
         navItems.push({ label: 'Audit Logs', path: '/audit', icon: ShieldAlert });
     }
 

@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, FileText, Image as ImageIcon, Loader } from 'lucide-react';
 import api from '../services/api';
 
+import { getFileUrl } from '../utils/urlHelper';
+
 const FileUpload = ({
     onUploadSuccess,
     label = "Upload File",
@@ -13,6 +15,11 @@ const FileUpload = ({
     const [uploading, setUploading] = useState(false);
     const [preview, setPreview] = useState(currentFileUrl);
     const fileInputRef = useRef(null);
+
+    // Update preview when prop changes
+    React.useEffect(() => {
+        setPreview(currentFileUrl);
+    }, [currentFileUrl]);
 
     const handleDragEnter = (e) => {
         e.preventDefault();
@@ -72,15 +79,6 @@ const FileUpload = ({
             });
 
             const fileUrl = response.data.url;
-            // If it's a relative URL from our backend, prepend base URL if needed
-            // But usually we want to store the full URL or relative path.
-            // Let's assume the backend returns a path like /uploads/filename.ext
-            // We might need to prepend the API base URL if we are running on different ports
-            // For now, let's assume relative path works if served from same origin or handled by proxy
-
-            // Actually, since we are using vite proxy, /uploads should work if we proxy it
-            // We need to add proxy for /uploads in vite.config.js if not already there
-
             setPreview(fileUrl);
             onUploadSuccess(fileUrl);
         } catch (error) {
@@ -139,7 +137,7 @@ const FileUpload = ({
                 <div className="relative border border-slate-200 rounded-lg p-2 bg-slate-50 flex items-center space-x-3">
                     <div className="w-12 h-12 bg-slate-200 rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
                         {accept === 'image/*' ? (
-                            <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                            <img src={getFileUrl(preview)} alt="Preview" className="w-full h-full object-cover" />
                         ) : (
                             <FileText className="text-slate-500" size={24} />
                         )}
@@ -149,7 +147,7 @@ const FileUpload = ({
                             {preview.split('/').pop()}
                         </p>
                         <a
-                            href={preview}
+                            href={getFileUrl(preview)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-blue-500 hover:underline"

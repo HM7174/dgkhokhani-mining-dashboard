@@ -4,6 +4,7 @@ import api from '../services/api';
 import { ArrowLeft, Save, Plus, Trash2, FileText, User } from 'lucide-react';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
+import { getFileUrl } from '../utils/urlHelper';
 
 const DriverDetails = () => {
     const { id } = useParams();
@@ -143,7 +144,7 @@ const DriverDetails = () => {
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center text-center">
                         <div className="w-40 h-40 bg-slate-100 rounded-full mb-4 flex items-center justify-center overflow-hidden border-4 border-white shadow-md relative group">
                             {formData.photo_url ? (
-                                <img src={formData.photo_url} alt={formData.full_name} className="w-full h-full object-cover" />
+                                <img src={getFileUrl(formData.photo_url)} alt={formData.full_name} className="w-full h-full object-cover" />
                             ) : (
                                 <User size={64} className="text-slate-300" />
                             )}
@@ -307,7 +308,7 @@ const DriverDetails = () => {
                                             </div>
                                             <div>
                                                 <p className="font-medium text-slate-800">{doc.name}</p>
-                                                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline truncate max-w-[200px] block">
+                                                <a href={getFileUrl(doc.url)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline truncate max-w-[200px] block">
                                                     View Document
                                                 </a>
                                             </div>

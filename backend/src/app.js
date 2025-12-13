@@ -7,8 +7,15 @@ const app = express();
 
 // Middleware
 app.use(helmet());
+// CORS configuration
+const frontendUrl = process.env.FRONTEND_URL;
+// Ensure origin has protocol if it's not '*'
+const origin = frontendUrl && frontendUrl !== '*' && !frontendUrl.startsWith('http')
+    ? `https://${frontendUrl}`
+    : frontendUrl || '*';
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: origin,
     credentials: true
 }));
 app.use(express.json());

@@ -29,7 +29,7 @@ services:
         fromService:
           type: web
           name: mining-dashboard-frontend
-          property: host
+          property: url
 
   # Frontend Static Site
   - type: web

@@ -8,14 +8,39 @@ const app = express();
 // Middleware
 app.use(helmet());
 // CORS configuration
-const frontendUrl = process.env.FRONTEND_URL;
-// Ensure origin has protocol if it's not '*'
-const origin = frontendUrl && frontendUrl !== '*' && !frontendUrl.startsWith('http')
-    ? `https://${frontendUrl}`
-    : frontendUrl || '*';
-
+// CORS configuration
 app.use(cors({
-    origin: origin,
+    origin: (origin, callback) => {
+        const allowedOrigin = process.env.FRONTEND_URL;
+
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        // Check against allowed origin
+        // 1. Exact match
+        if (allowedOrigin && origin === allowedOrigin) return callback(null, true);
+
+        // 2. Match if allowedOrigin is missing protocol (e.g. domain.com vs https://domain.com)
+        if (allowedOrigin && !allowedOrigin.startsWith('http')) {
+            if (origin === `https://${allowedOrigin}` || origin === `http://${allowedOrigin}`) {
+                return callback(null, true);
+            }
+        }
+
+        // 3. Match if allowedOrigin has protocol but origin differs (rare, but good for robustness)
+        // e.g. allowed: https://site.com, origin: http://site.com
+
+        // 4. Localhost allowed for development
+        if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+            return callback(null, true);
+        }
+
+        // If we want to be permissive during debugging (optional, commented out for security)
+        // return callback(null, true);
+
+        console.log('Blocked by CORS:', origin); // helpful for server logs
+        callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 }));
 app.use(express.json());

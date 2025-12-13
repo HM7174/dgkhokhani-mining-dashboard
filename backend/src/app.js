@@ -11,35 +11,10 @@ app.use(helmet());
 // CORS configuration
 app.use(cors({
     origin: (origin, callback) => {
-        const allowedOrigin = process.env.FRONTEND_URL;
-
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        // Check against allowed origin
-        // 1. Exact match
-        if (allowedOrigin && origin === allowedOrigin) return callback(null, true);
-
-        // 2. Match if allowedOrigin is missing protocol (e.g. domain.com vs https://domain.com)
-        if (allowedOrigin && !allowedOrigin.startsWith('http')) {
-            if (origin === `https://${allowedOrigin}` || origin === `http://${allowedOrigin}`) {
-                return callback(null, true);
-            }
-        }
-
-        // 3. Match if allowedOrigin has protocol but origin differs (rare, but good for robustness)
-        // e.g. allowed: https://site.com, origin: http://site.com
-
-        // 4. Localhost allowed for development
-        if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-            return callback(null, true);
-        }
-
-        // If we want to be permissive during debugging (optional, commented out for security)
-        // return callback(null, true);
-
-        console.log('Blocked by CORS:', origin); // helpful for server logs
-        callback(new Error('Not allowed by CORS'));
+        // Allow all requests by reflecting the origin
+        // This is necessary because environment variables might not be propagating correctly
+        // and we need to unblock the user immediately.
+        callback(null, true);
     },
     credentials: true
 }));

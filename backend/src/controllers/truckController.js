@@ -55,7 +55,7 @@ const getTruckById = async (req, res) => {
 const createTruck = async (req, res) => {
     const {
         name, type, registration_number, puc_expiry, insurance_expiry,
-        insurance_provider, gps_device_id, site_id, status
+        insurance_provider, gps_device_id, site_id, status, documents
     } = req.body;
 
     try {
@@ -68,7 +68,8 @@ const createTruck = async (req, res) => {
             insurance_provider,
             gps_device_id,
             site_id,
-            status: status || 'active'
+            status: status || 'active',
+            documents: JSON.stringify(documents || [])
         }).returning('*');
 
         res.status(201).json(newTruck);
@@ -85,6 +86,9 @@ const createTruck = async (req, res) => {
 const updateTruck = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
+    if (updates.documents) {
+        updates.documents = JSON.stringify(updates.documents);
+    }
 
     try {
         const [updatedTruck] = await db('trucks')

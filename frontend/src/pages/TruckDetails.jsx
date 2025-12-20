@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { ArrowLeft, Save, Truck, Wrench, Activity, MapPin, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Truck, Wrench, Activity, MapPin, Calendar, FileText, Plus, Trash2 } from 'lucide-react';
+import Modal from '../components/Modal';
+import FileUpload from '../components/FileUpload';
+import { getFileUrl } from '../utils/urlHelper';
 
 const TruckDetails = () => {
     const { id } = useParams();
@@ -19,8 +22,12 @@ const TruckDetails = () => {
         puc_expiry: '',
         insurance_expiry: '',
         insurance_provider: '',
-        gps_device_id: ''
+        gps_device_id: '',
+        documents: []
     });
+
+    const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+    const [newDoc, setNewDoc] = useState({ name: '', url: '', type: 'other' });
 
     useEffect(() => {
         fetchTruckDetails();
@@ -42,7 +49,13 @@ const TruckDetails = () => {
                 puc_expiry: data.puc_expiry ? data.puc_expiry.split('T')[0] : '',
                 insurance_expiry: data.insurance_expiry ? data.insurance_expiry.split('T')[0] : '',
                 insurance_provider: data.insurance_provider || '',
-                gps_device_id: data.gps_device_id || ''
+                gps_device_id: data.gps_device_id || '',
+                documents: (() => {
+                    if (typeof data.documents === 'string') {
+                        try { return JSON.parse(data.documents); } catch (e) { return []; }
+                    }
+                    return Array.isArray(data.documents) ? data.documents : [];
+                })()
             });
         } catch (error) {
             console.error('Error fetching truck details:', error);
@@ -64,6 +77,20 @@ const TruckDetails = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAddDocument = () => {
+        if (!newDoc.name) return alert('Please enter document name');
+
+        const updatedDocs = [...formData.documents, { ...newDoc, id: Date.now() }];
+        setFormData(prev => ({ ...prev, documents: updatedDocs }));
+        setNewDoc({ name: '', url: '', type: 'other' });
+        setIsDocModalOpen(false);
+    };
+
+    const handleDeleteDocument = (docId) => {
+        const updatedDocs = formData.documents.filter(d => d.id !== docId);
+        setFormData(prev => ({ ...prev, documents: updatedDocs }));
     };
 
     const handleSave = async () => {
@@ -276,8 +303,89 @@ const TruckDetails = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Documents Section */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex items-center justify-between mb-4 border-b pb-2">
+                            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                                <FileText size={18} className="text-blue-500" />
+                                Documents
+                            </h3>
+                            <button
+                                onClick={() => setIsDocModalOpen(true)}
+                                className="text-sm flex items-center space-x-1 text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                                <Plus size={16} />
+                                <span>Add Document</span>
+                            </button>
+                        </div>
+
+                        {formData.documents.length === 0 ? (
+                            <div className="text-center py-8 text-slate-400">
+                                <FileText size={32} className="mx-auto mb-2 opacity-50" />
+                                <p>No documents added yet</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {formData.documents.map((doc) => (
+                                    <div key={doc.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-100 transition-colors">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                                                <FileText size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-slate-800">{doc.name}</p>
+                                                <a href={getFileUrl(doc.url)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline truncate max-w-[200px] block">
+                                                    View Document
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteDocument(doc.id)}
+                                            className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {/* Add Document Modal */}
+            <Modal isOpen={isDocModalOpen} onClose={() => setIsDocModalOpen(false)} title="Add New Document">
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Document Name</label>
+                        <input
+                            type="text"
+                            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="e.g. Insurance Policy"
+                            value={newDoc.name}
+                            onChange={(e) => setNewDoc({ ...newDoc, name: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <FileUpload
+                            label="Document File (PDF)"
+                            accept="application/pdf"
+                            currentFileUrl={newDoc.url}
+                            onUploadSuccess={(url) => setNewDoc({ ...newDoc, url: url, type: 'pdf' })}
+                            onDelete={() => setNewDoc({ ...newDoc, url: '' })}
+                        />
+                    </div>
+                    <div className="pt-4">
+                        <button
+                            onClick={handleAddDocument}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors"
+                        >
+                            Add Document
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

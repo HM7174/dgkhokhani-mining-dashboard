@@ -10,9 +10,10 @@ const AttendancePage = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({
-        driver_id: '', date: new Date().toISOString().split('T')[0], status: 'present', in_time: '', out_time: '', notes: ''
+        driver_id: '', date: new Date().toISOString().split('T')[0], status: 'present', notes: ''
     });
     const [drivers, setDrivers] = useState([]);
+    const [importing, setImporting] = useState(false);
 
     useEffect(() => {
         fetchAttendance();
@@ -46,7 +47,7 @@ const AttendancePage = () => {
             setIsModalOpen(false);
             fetchAttendance();
             setFormData({
-                driver_id: '', date: new Date().toISOString().split('T')[0], status: 'present', in_time: '', out_time: '', notes: ''
+                driver_id: '', date: new Date().toISOString().split('T')[0], status: 'present', notes: ''
             });
         } catch (error) {
             console.error('Error marking attendance:', error);
@@ -67,16 +68,52 @@ const AttendancePage = () => {
                 </span>
             )
         },
-        { header: 'In Time', accessor: 'in_time' },
-        { header: 'Out Time', accessor: 'out_time' },
         { header: 'Notes', accessor: 'notes' },
     ];
+
+    const handleImportExcel = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setImporting(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await api.post('/attendance/import', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            alert(`Successfully imported ${response.data.count} attendance records`);
+            fetchAttendance();
+        } catch (error) {
+            console.error('Error importing Excel:', error);
+            if (error.response?.data?.errors) {
+                alert('Import failed:\n' + error.response.data.errors.join('\n'));
+            } else {
+                alert('Failed to import Excel file');
+            }
+        } finally {
+            setImporting(false);
+            e.target.value = ''; // Reset file input
+        }
+    };
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-slate-800">Attendance</h1>
                 <div className="flex space-x-2">
+                    <label className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer">
+                        <Upload size={20} />
+                        <span>{importing ? 'Importing...' : 'Import Excel'}</span>
+                        <input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleImportExcel}
+                            className="hidden"
+                            disabled={importing}
+                        />
+                    </label>
                     <button
                         onClick={() => exportToCSV(records, 'attendance_records')}
                         className="flex items-center space-x-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg transition-colors"
@@ -139,27 +176,6 @@ const AttendancePage = () => {
                             <option value="present">Present</option>
                             <option value="absent">Absent</option>
                         </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">In Time</label>
-                            <input
-                                type="time"
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.in_time}
-                                onChange={(e) => setFormData({ ...formData, in_time: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Out Time</label>
-                            <input
-                                type="time"
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.out_time}
-                                onChange={(e) => setFormData({ ...formData, out_time: e.target.value })}
-                            />
-                        </div>
                     </div>
 
                     <div>

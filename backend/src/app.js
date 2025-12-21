@@ -31,6 +31,7 @@ const alertRoutes = require('./routes/alertRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const userRoutes = require('./routes/userRoutes');
+const fleetRoutes = require('./routes/fleetRoutes');
 const path = require('path');
 
 app.use('/api/auth', authRoutes);
@@ -43,6 +44,7 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/fleet', fleetRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

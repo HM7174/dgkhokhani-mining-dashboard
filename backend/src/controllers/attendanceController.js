@@ -345,10 +345,25 @@ const exportAttendance = async (req, res) => {
     }
 };
 
+const deleteAttendance = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const deletedCount = await db('attendance').where({ id }).del();
+        if (deletedCount === 0) {
+            return res.status(404).json({ error: 'Attendance record not found' });
+        }
+        res.json({ message: 'Attendance record deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting attendance:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     getAttendance,
     markAttendance,
     bulkAttendance,
     importExcel,
-    exportAttendance
+    exportAttendance,
+    deleteAttendance
 };

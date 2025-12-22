@@ -13,5 +13,6 @@ router.post('/', authorizeRoles('admin', 'site_manager'), attendanceController.m
 router.post('/bulk', authorizeRoles('admin', 'site_manager'), attendanceController.bulkAttendance);
 router.post('/import', authorizeRoles('admin', 'site_manager'), upload.single('file'), attendanceController.importExcel);
 router.get('/export', authorizeRoles('admin', 'site_manager'), attendanceController.exportAttendance);
+router.delete('/:id', authorizeRoles('admin', 'site_manager'), attendanceController.deleteAttendance);
 
 module.exports = router;

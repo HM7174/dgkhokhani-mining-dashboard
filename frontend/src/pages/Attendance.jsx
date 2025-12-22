@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import Table from '../components/Table';
 import Modal from '../components/Modal';
-import { Plus, Upload, Calendar, ChevronLeft, ChevronRight, Check, X, Grid, List, Download } from 'lucide-react';
+import { Plus, Upload, Calendar, ChevronLeft, ChevronRight, Check, X, Grid, List, Download, Trash2 } from 'lucide-react';
 
 const AttendancePage = () => {
     const [records, setRecords] = useState([]);
@@ -147,8 +147,19 @@ const AttendancePage = () => {
             console.error('Error importing Excel:', error);
             alert(error.response?.data?.error || 'Failed to import Excel file');
         } finally {
-            setImporting(false);
             e.target.value = '';
+        }
+    };
+
+    const handleDeleteAttendance = async (id) => {
+        try {
+            await api.delete(`/attendance/${id}`);
+            if (view === 'history') fetchAttendance();
+            else if (view === 'daily') fetchDailyAttendance();
+            else fetchMonthlyAttendance();
+        } catch (error) {
+            console.error('Error deleting attendance:', error);
+            alert('Failed to delete attendance record');
         }
     };
 
@@ -205,6 +216,33 @@ const AttendancePage = () => {
                     <p className="text-slate-500 font-medium ml-11 uppercase text-xs tracking-widest">Monthly Grid Logic Integrated</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 ml-11 lg:ml-0">
+                    <button
+                        onClick={async () => {
+                            try {
+                                const token = localStorage.getItem('token');
+                                const response = await fetch(`${api.defaults.baseURL}/attendance/export`, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
+                                if (!response.ok) throw new Error('Download failed');
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'DG_KHOKHANI_ATTENDANCE.xlsx';
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                            } catch (error) {
+                                console.error('Export error:', error);
+                                alert('Failed to download Excel file');
+                            }
+                        }}
+                        className="flex items-center space-x-2 bg-white border-2 border-slate-100 hover:border-slate-200 text-slate-600 px-5 py-2.5 rounded-2xl transition-all shadow-sm font-bold active:scale-95"
+                    >
+                        <Download size={18} />
+                        <span>Export</span>
+                    </button>
                     <label className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-100 cursor-pointer group active:scale-95">
                         <Upload size={18} className="group-hover:scale-110 transition-transform" />
                         <span className="font-bold">{importing ? 'Importing...' : 'Import Excel'}</span>
@@ -387,6 +425,20 @@ const AttendancePage = () => {
                             )
                         },
                         { header: 'Notes', accessor: 'notes', render: (row) => <span className="text-slate-500 italic text-sm">{row.notes || '---'}</span> },
+                        {
+                            header: 'Actions',
+                            accessor: 'actions',
+                            render: (row) => (
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('Delete this record?')) handleDeleteAttendance(row.id);
+                                    }}
+                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )
+                        }
                     ]} data={records} />
                 </div>
             )}

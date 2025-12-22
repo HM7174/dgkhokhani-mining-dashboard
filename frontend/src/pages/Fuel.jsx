@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import Table from '../components/Table';
 import Modal from '../components/Modal';
-import Modal from '../components/Modal';
+
 import { Plus, Edit, Trash2 } from 'lucide-react';
 
 const FuelPage = () => {

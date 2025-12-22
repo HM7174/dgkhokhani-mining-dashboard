@@ -65,10 +65,51 @@ const getFuelStats = async (req, res) => {
         console.error('Error fetching fuel stats:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+};
+
+const updateFuelLog = async (req, res) => {
+    const { id } = req.params;
+    const { truck_id, site_id, date, litres, price_per_litre, vendor, odometer_reading } = req.body;
+    try {
+        const [updatedLog] = await db('fuel_logs')
+            .where({ id })
+            .update({
+                truck_id, site_id, date, litres, price_per_litre, vendor, odometer_reading
+            })
+            .returning('*');
+
+        if (!updatedLog) {
+            return res.status(404).json({ error: 'Fuel log not found' });
+        }
+
+        // Note: Updating truck stats on edit is complex as we'd need to revert old stats or recalculate.
+        // For simplicity, we are not updating truck stats on edit in this version.
+
+        res.json(updatedLog);
+    } catch (error) {
+        console.error('Error updating fuel log:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+const deleteFuelLog = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const deletedCount = await db('fuel_logs').where({ id }).del();
+        if (deletedCount === 0) {
+            return res.status(404).json({ error: 'Fuel log not found' });
+        }
+        res.json({ message: 'Fuel log deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting fuel log:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 }
 
 module.exports = {
     getFuelLogs,
     addFuelLog,
-    getFuelStats
+    getFuelStats,
+    updateFuelLog,
+    deleteFuelLog
 };

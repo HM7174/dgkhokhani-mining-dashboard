@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import Table from '../components/Table';
 import Modal from '../components/Modal';
-import { Plus } from 'lucide-react';
+import Modal from '../components/Modal';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 
 const FuelPage = () => {
     const [logs, setLogs] = useState([]);
@@ -11,6 +12,7 @@ const FuelPage = () => {
     const [formData, setFormData] = useState({
         truck_id: '', site_id: '', date: new Date().toISOString().split('T')[0], litres: '', price_per_litre: '', vendor: '', odometer_reading: ''
     });
+    const [editingLog, setEditingLog] = useState(null);
     const [trucks, setTrucks] = useState([]);
     const [sites, setSites] = useState([]);
 
@@ -52,15 +54,46 @@ const FuelPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/fuel', formData);
+            if (editingLog) {
+                await api.put(`/fuel/${editingLog.id}`, formData);
+            } else {
+                await api.post('/fuel', formData);
+            }
             setIsModalOpen(false);
+            setEditingLog(null);
             fetchLogs();
             setFormData({
                 truck_id: '', site_id: '', date: new Date().toISOString().split('T')[0], litres: '', price_per_litre: '', vendor: '', odometer_reading: ''
             });
         } catch (error) {
-            console.error('Error creating fuel log:', error);
-            alert('Failed to create fuel log');
+            console.error('Error saving fuel log:', error);
+            alert('Failed to save fuel log');
+        }
+    };
+
+    const handleEdit = (log) => {
+        setEditingLog(log);
+        setFormData({
+            truck_id: log.truck_id,
+            site_id: log.site_id,
+            date: new Date(log.date).toISOString().split('T')[0],
+            litres: log.litres,
+            price_per_litre: log.price_per_litre,
+            vendor: log.vendor,
+            odometer_reading: log.odometer_reading
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this fuel log?')) {
+            try {
+                await api.delete(`/fuel/${id}`);
+                fetchLogs();
+            } catch (error) {
+                console.error('Error deleting fuel log:', error);
+                alert('Failed to delete fuel log');
+            }
         }
     };
 
@@ -71,6 +104,19 @@ const FuelPage = () => {
         { header: 'Litres', accessor: 'litres' },
         { header: 'Cost', accessor: 'cost', render: (row) => row.price_per_litre ? `₹${(row.litres * row.price_per_litre).toFixed(2)}` : '-' },
         { header: 'Odometer', accessor: 'odometer_reading' },
+        {
+            header: 'Actions',
+            render: (row) => (
+                <div className="flex space-x-2">
+                    <button onClick={() => handleEdit(row)} className="text-blue-600 hover:text-blue-800">
+                        <Edit size={18} />
+                    </button>
+                    <button onClick={() => handleDelete(row.id)} className="text-red-600 hover:text-red-800">
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            )
+        }
     ];
 
     return (
@@ -78,7 +124,13 @@ const FuelPage = () => {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-slate-800">Fuel Logs</h1>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => {
+                        setEditingLog(null);
+                        setFormData({
+                            truck_id: '', site_id: '', date: new Date().toISOString().split('T')[0], litres: '', price_per_litre: '', vendor: '', odometer_reading: ''
+                        });
+                        setIsModalOpen(true);
+                    }}
                     className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
                     <Plus size={20} />
@@ -92,7 +144,7 @@ const FuelPage = () => {
                 <Table columns={columns} data={logs} />
             )}
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Fuel Entry">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingLog ? "Edit Fuel Entry" : "Add Fuel Entry"}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -186,7 +238,7 @@ const FuelPage = () => {
                             type="submit"
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors"
                         >
-                            Add Entry
+                            {editingLog ? 'Update Entry' : 'Add Entry'}
                         </button>
                     </div>
                 </form>

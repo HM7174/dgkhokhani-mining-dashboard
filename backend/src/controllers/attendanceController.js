@@ -330,15 +330,124 @@ const importExcel = async (req, res) => {
 const exportAttendance = async (req, res) => {
     try {
         if (!fs.existsSync(EXCEL_PATH)) {
-            return res.status(404).json({ error: 'Attendance sheet not found' });
+            return res.status(404).json({ error: 'Attendance sheet template not found' });
         }
 
-        res.download(EXCEL_PATH, 'DG_KHOKHANI_ATTENDANCE.xlsx', (err) => {
-            if (err) {
-                console.error('Error downloading file:', err);
-                // Can't send JSON here if headers sent, but good for logging
-            }
+        // 1. Read workbook
+        const workbook = xlsx.readFile(EXCEL_PATH);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        // 2. Get DB Data
+        const drivers = await db('drivers').where('employment_status', 'active').select('id', 'full_name');
+
+        // We really want to export the current month shown or all time? 
+        // For this month-based sheet, let's assume we export "THIS" month or whatever month implies.
+        // But the sheet has 1-31. Let's just fetch ALL attendance for the drivers and try to map to the sheet's current setup.
+        // Ideally we should know WHICH month the sheet represents. 
+        // Logic: Scan sheet for month name. If found, filter DB by that. If not, maybe just export current month?
+        // Let's stick to: export CURRENT month data into the sheet for now, as that's the primary use case.
+
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        // Check if sheet has a specific month
+        const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        const headerRow = rows[0]; // Assuming row 0 has month headers maybe
+
+        let targetMonth = currentMonth;
+        let targetYear = currentYear;
+
+        // Simple check for month names in header
+        const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        if (headerRow) {
+            headerRow.forEach(cell => {
+                if (typeof cell === 'string') {
+                    const lower = cell.toLowerCase();
+                    const foundMonth = months.findIndex(m => lower.includes(m));
+                    if (foundMonth !== -1) targetMonth = foundMonth;
+                    // Try to find year?
+                    const yearMatch = lower.match(/20\d{2}/);
+                    if (yearMatch) targetYear = parseInt(yearMatch[0]);
+                }
+            });
+        }
+
+        // Fetch attendance for this target month
+        // Construct start/end dates
+        const startDate = new Date(targetYear, targetMonth, 1);
+        const endDate = new Date(targetYear, targetMonth + 1, 0); // Last day of month
+
+        const startStr = startDate.toISOString().split('T')[0];
+        const endStr = endDate.toISOString().split('T')[0];
+
+        const attendance = await db('attendance')
+            .whereBetween('date', [startStr, endStr])
+            .select('*');
+
+        const dataMap = {};
+        attendance.forEach(r => {
+            const d = new Date(r.date).getDate();
+            if (!dataMap[r.driver_id]) dataMap[r.driver_id] = {};
+            dataMap[r.driver_id][d] = r.status;
         });
+
+        // 3. Map to Excel
+        // Find "NAME" column
+        let nameColIndex = 0; // Default
+        if (headerRow) {
+            const idx = headerRow.findIndex(c => typeof c === 'string' && c.toUpperCase() === 'NAME');
+            if (idx !== -1) nameColIndex = idx;
+        }
+
+        // Find day columns (assuming row 1 has 1...31)
+        const dayRow = rows[1];
+        const dayColMap = {}; // dayNum -> colIndex
+        if (dayRow) {
+            dayRow.forEach((cell, idx) => {
+                const dayNum = parseInt(cell);
+                if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+                    dayColMap[dayNum] = idx;
+                }
+            });
+        }
+
+        // Iterate drivers in DB and find them in Excel rows
+        // Note: we only update rows that match DB drivers.
+        // Or should we iterate Excel rows and find DB driver? Matches `updateExcelAttendance` logic.
+        for (let r = 2; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row) continue;
+
+            const driverNameInSheet = row[nameColIndex];
+            if (!driverNameInSheet) continue;
+
+            // Find matching driver in DB list
+            const driver = drivers.find(d => d.full_name.toLowerCase().trim() === String(driverNameInSheet).toLowerCase().trim());
+
+            if (driver && dataMap[driver.id]) {
+                // Update days
+                Object.keys(dataMap[driver.id]).forEach(dayStr => {
+                    const day = parseInt(dayStr);
+                    const status = dataMap[driver.id][day];
+                    const colIdx = dayColMap[day];
+
+                    if (typeof colIdx !== 'undefined') {
+                        const cellRef = xlsx.utils.encode_cell({ r: r, c: colIdx });
+                        worksheet[cellRef] = { t: 's', v: status === 'present' ? 'P' : 'A' };
+                    }
+                });
+            }
+        }
+
+        // 4. Send buffer
+        const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        res.setHeader('Content-Disposition', `attachment; filename="DG_KHOKHANI_ATTENDANCE_${months[targetMonth]}_${targetYear}.xlsx"`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+
     } catch (error) {
         console.error('Error exporting attendance:', error);
         res.status(500).json({ error: 'Internal server error' });

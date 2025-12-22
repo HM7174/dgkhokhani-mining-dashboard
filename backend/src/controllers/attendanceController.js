@@ -1,5 +1,86 @@
-const db = require('../db/db');
 const xlsx = require('xlsx');
+const path = require('path');
+const fs = require('fs');
+
+const EXCEL_PATH = path.join(__dirname, '../../../DG KHOKHANI ATTENDANCE SHEET.xlsx');
+
+const updateExcelAttendance = async (driverName, date, status) => {
+    try {
+        if (!fs.existsSync(EXCEL_PATH)) {
+            console.error('Excel file not found at:', EXCEL_PATH);
+            return;
+        }
+
+        const workbook = xlsx.readFile(EXCEL_PATH);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+
+        const headerRow = rows[0];
+        const dayRow = rows[1];
+        const nameColIndex = headerRow.indexOf('NAME');
+
+        if (nameColIndex === -1) {
+            console.error('NAME column not found in Excel');
+            return;
+        }
+
+        const parsedDate = new Date(date);
+        const dayNum = parsedDate.getDate();
+        const monthNum = parsedDate.getMonth();
+        const yearNum = parsedDate.getFullYear();
+
+        // Check if Excel month matches the request month (basic check)
+        const monthHeader = headerRow.find(h => typeof h === 'string' && ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'].some(m => h.toLowerCase().includes(m)));
+        if (monthHeader) {
+            const parts = monthHeader.split(/[, ]+/);
+            const monthName = parts[0].toLowerCase();
+            const excelMonthIndex = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'].indexOf(monthName);
+            // If month doesn't match, we might be writing to the wrong sheet or file, but for now we follow the user's template.
+            if (excelMonthIndex !== monthNum) {
+                console.warn(`Month mismatch: Excel has ${monthName}, requested ${date}`);
+            }
+        }
+
+        // Find driver row
+        let driverRowIndex = -1;
+        for (let i = 2; i < rows.length; i++) {
+            if (rows[i] && rows[i][nameColIndex] && String(rows[i][nameColIndex]).toLowerCase().trim() === driverName.toLowerCase().trim()) {
+                driverRowIndex = i;
+                break;
+            }
+        }
+
+        if (driverRowIndex === -1) {
+            console.warn(`Driver "${driverName}" not found in Excel sheet.`);
+            return;
+        }
+
+        // Find day column
+        let dayColIndex = -1;
+        for (let j = 0; j < dayRow.length; j++) {
+            if (parseInt(dayRow[j]) === dayNum) {
+                dayColIndex = j;
+                break;
+            }
+        }
+
+        if (dayColIndex === -1) {
+            console.error(`Day ${dayNum} column not found in Excel.`);
+            return;
+        }
+
+        // Update cell
+        const cellRef = xlsx.utils.encode_cell({ r: driverRowIndex, c: dayColIndex });
+        worksheet[cellRef] = { t: 's', v: status === 'present' ? 'P' : 'A' };
+
+        // Write back
+        xlsx.writeFile(workbook, EXCEL_PATH);
+        console.log(`Excel updated for ${driverName} on ${date}: ${status}`);
+    } catch (error) {
+        console.error('Error updating Excel:', error);
+    }
+};
 
 const getAttendance = async (req, res) => {
     const { date, driver_id, include_all_drivers } = req.query;
@@ -55,6 +136,12 @@ const markAttendance = async (req, res) => {
             .merge() // Update if exists
             .returning('*');
 
+        // Sync with Excel
+        const driver = await db('drivers').where('id', driver_id).first();
+        if (driver) {
+            await updateExcelAttendance(driver.full_name, date, status);
+        }
+
         res.json(record);
     } catch (error) {
         console.error('Error marking attendance:', error);
@@ -74,6 +161,12 @@ const bulkAttendance = async (req, res) => {
                 await trx('attendance').insert(record)
                     .onConflict(['driver_id', 'date'])
                     .merge();
+
+                // Sync with Excel
+                const driver = await trx('drivers').where('id', record.driver_id).first();
+                if (driver) {
+                    await updateExcelAttendance(driver.full_name, record.date, record.status);
+                }
             }
         });
         res.json({ message: 'Bulk attendance uploaded successfully' });

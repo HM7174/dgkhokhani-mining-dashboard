@@ -4,7 +4,7 @@ import api from '../services/api';
 import Table from '../components/Table';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 const DriversPage = () => {
     const navigate = useNavigate();
@@ -54,6 +54,16 @@ const DriversPage = () => {
         }
     };
 
+    const handleDeleteDriver = async (driverId) => {
+        try {
+            await api.delete(`/drivers/${driverId}`);
+            fetchDrivers();
+        } catch (error) {
+            console.error('Error deleting driver:', error);
+            alert('Failed to delete driver');
+        }
+    };
+
     const columns = [
         {
             header: 'Photo',
@@ -100,7 +110,27 @@ const DriversPage = () => {
                 <div className="text-center py-10">Loading...</div>
             ) : (
                 <Table
-                    columns={columns}
+                    columns={[
+                        ...columns,
+                        {
+                            header: 'Actions',
+                            accessor: 'actions',
+                            render: (row) => (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm('Are you sure you want to delete this driver?')) {
+                                            handleDeleteDriver(row.id);
+                                        }
+                                    }}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                    title="Delete Driver"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )
+                        }
+                    ]}
                     data={drivers}
                     onRowClick={(driver) => navigate(`/drivers/${driver.id}`)}
                 />

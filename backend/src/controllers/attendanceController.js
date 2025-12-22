@@ -327,9 +327,28 @@ const importExcel = async (req, res) => {
     }
 };
 
+const exportAttendance = async (req, res) => {
+    try {
+        if (!fs.existsSync(EXCEL_PATH)) {
+            return res.status(404).json({ error: 'Attendance sheet not found' });
+        }
+
+        res.download(EXCEL_PATH, 'DG_KHOKHANI_ATTENDANCE.xlsx', (err) => {
+            if (err) {
+                console.error('Error downloading file:', err);
+                // Can't send JSON here if headers sent, but good for logging
+            }
+        });
+    } catch (error) {
+        console.error('Error exporting attendance:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     getAttendance,
     markAttendance,
     bulkAttendance,
-    importExcel
+    importExcel,
+    exportAttendance
 };

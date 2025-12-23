@@ -35,7 +35,7 @@ const createDriver = async (req, res) => {
     const {
         full_name, phone, aadhar_number, pan_number, license_number,
         license_expiry, bank_name, bank_account_last4, assigned_truck_id,
-        employment_status, documents, photo_url
+        employment_status, documents, photo_url, post
     } = req.body;
 
     try {
@@ -51,7 +51,8 @@ const createDriver = async (req, res) => {
             assigned_truck_id,
             employment_status: employment_status || 'active',
             documents: JSON.stringify(documents || []),
-            photo_url
+            photo_url,
+            post: post || 'Driver'
         }).returning('*');
 
         res.status(201).json(newDriver);

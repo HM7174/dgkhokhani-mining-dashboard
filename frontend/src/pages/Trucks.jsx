@@ -160,6 +160,8 @@ const TrucksPage = () => {
                             <option value="excavator">Excavator</option>
                             <option value="grader">Grader</option>
                             <option value="roller">Roller</option>
+                            <option value="loader">Loader</option>
+                            <option value="dumper">Dumper</option>
                         </select>
                     </div>
                     <div>

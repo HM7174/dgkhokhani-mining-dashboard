@@ -330,6 +330,7 @@ const importExcel = async (req, res) => {
 const exportAttendance = async (req, res) => {
     try {
         if (!fs.existsSync(EXCEL_PATH)) {
+            console.error('Attendance sheet template not found at:', EXCEL_PATH);
             return res.status(404).json({ error: 'Attendance sheet template not found' });
         }
 
@@ -340,13 +341,7 @@ const exportAttendance = async (req, res) => {
 
         // 2. Get DB Data
         const drivers = await db('drivers').where('employment_status', 'active').select('id', 'full_name');
-
-        // We really want to export the current month shown or all time? 
-        // For this month-based sheet, let's assume we export "THIS" month or whatever month implies.
-        // But the sheet has 1-31. Let's just fetch ALL attendance for the drivers and try to map to the sheet's current setup.
-        // Ideally we should know WHICH month the sheet represents. 
-        // Logic: Scan sheet for month name. If found, filter DB by that. If not, maybe just export current month?
-        // Let's stick to: export CURRENT month data into the sheet for now, as that's the primary use case.
+        console.log(`Found ${drivers.length} active drivers in DB.`);
 
         const now = new Date();
         const currentMonth = now.getMonth();
@@ -354,7 +349,11 @@ const exportAttendance = async (req, res) => {
 
         // Check if sheet has a specific month
         const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-        const headerRow = rows[0]; // Assuming row 0 has month headers maybe
+        if (rows.length < 2) {
+            console.error('Excel sheet is too short/empty');
+            return res.status(400).json({ error: 'Excel sheet template is invalid' });
+        }
+        const headerRow = rows[0];
 
         let targetMonth = currentMonth;
         let targetYear = currentYear;
@@ -367,17 +366,16 @@ const exportAttendance = async (req, res) => {
                     const lower = cell.toLowerCase();
                     const foundMonth = months.findIndex(m => lower.includes(m));
                     if (foundMonth !== -1) targetMonth = foundMonth;
-                    // Try to find year?
                     const yearMatch = lower.match(/20\d{2}/);
                     if (yearMatch) targetYear = parseInt(yearMatch[0]);
                 }
             });
         }
+        console.log(`Exporting for Month Index: ${targetMonth}, Year: ${targetYear}`);
 
         // Fetch attendance for this target month
-        // Construct start/end dates
         const startDate = new Date(targetYear, targetMonth, 1);
-        const endDate = new Date(targetYear, targetMonth + 1, 0); // Last day of month
+        const endDate = new Date(targetYear, targetMonth + 1, 0);
 
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
@@ -385,6 +383,7 @@ const exportAttendance = async (req, res) => {
         const attendance = await db('attendance')
             .whereBetween('date', [startStr, endStr])
             .select('*');
+        console.log(`Found ${attendance.length} attendance records for this period.`);
 
         const dataMap = {};
         attendance.forEach(r => {
@@ -394,16 +393,19 @@ const exportAttendance = async (req, res) => {
         });
 
         // 3. Map to Excel
-        // Find "NAME" column
-        let nameColIndex = 0; // Default
+        let nameColIndex = -1;
         if (headerRow) {
-            const idx = headerRow.findIndex(c => typeof c === 'string' && c.toUpperCase() === 'NAME');
-            if (idx !== -1) nameColIndex = idx;
+            nameColIndex = headerRow.findIndex(c => typeof c === 'string' && c.toUpperCase().trim() === 'NAME');
         }
 
-        // Find day columns (assuming row 1 has 1...31)
+        if (nameColIndex === -1) {
+            console.error('NAME column not found in Excel header');
+            // Try to fallback to index 1 which matches standard templates
+            nameColIndex = 1;
+        }
+
         const dayRow = rows[1];
-        const dayColMap = {}; // dayNum -> colIndex
+        const dayColMap = {};
         if (dayRow) {
             dayRow.forEach((cell, idx) => {
                 const dayNum = parseInt(cell);
@@ -413,9 +415,9 @@ const exportAttendance = async (req, res) => {
             });
         }
 
-        // Iterate drivers in DB and find them in Excel rows
-        // Note: we only update rows that match DB drivers.
-        // Or should we iterate Excel rows and find DB driver? Matches `updateExcelAttendance` logic.
+        let updatedCount = 0;
+        let matchedDrivers = 0;
+
         for (let r = 2; r < rows.length; r++) {
             const row = rows[r];
             if (!row) continue;
@@ -423,23 +425,31 @@ const exportAttendance = async (req, res) => {
             const driverNameInSheet = row[nameColIndex];
             if (!driverNameInSheet) continue;
 
-            // Find matching driver in DB list
-            const driver = drivers.find(d => d.full_name.toLowerCase().trim() === String(driverNameInSheet).toLowerCase().trim());
+            const nameInSheetClean = String(driverNameInSheet).toLowerCase().trim();
+            const driver = drivers.find(d => d.full_name.toLowerCase().trim() === nameInSheetClean);
 
-            if (driver && dataMap[driver.id]) {
-                // Update days
-                Object.keys(dataMap[driver.id]).forEach(dayStr => {
-                    const day = parseInt(dayStr);
-                    const status = dataMap[driver.id][day];
-                    const colIdx = dayColMap[day];
+            if (driver) {
+                matchedDrivers++;
+                if (dataMap[driver.id]) {
+                    Object.keys(dataMap[driver.id]).forEach(dayStr => {
+                        const day = parseInt(dayStr);
+                        const status = dataMap[driver.id][day];
+                        const colIdx = dayColMap[day];
 
-                    if (typeof colIdx !== 'undefined') {
-                        const cellRef = xlsx.utils.encode_cell({ r: r, c: colIdx });
-                        worksheet[cellRef] = { t: 's', v: status === 'present' ? 'P' : 'A' };
-                    }
-                });
+                        if (typeof colIdx !== 'undefined') {
+                            const cellRef = xlsx.utils.encode_cell({ r: r, c: colIdx });
+                            worksheet[cellRef] = { t: 's', v: status === 'present' ? 'P' : 'A' };
+                            updatedCount++;
+                        }
+                    });
+                }
+            } else {
+                // If we want to ensure ALL drivers in DB are in the sheet, 
+                // we'd need to add them, but for now we follow the template.
+                // console.warn(`Driver in sheet "${driverNameInSheet}" not found in DB`);
             }
         }
+        console.log(`Matched ${matchedDrivers} drivers. Updated ${updatedCount} cells with P/A.`);
 
         // 4. Send buffer
         const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });

@@ -206,7 +206,11 @@ const TruckDetails = () => {
                                     className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="truck">Truck</option>
-                                    <option value="machine">Machine</option>
+                                    <option value="excavator">Excavator</option>
+                                    <option value="grader">Grader</option>
+                                    <option value="roller">Roller</option>
+                                    <option value="loader">Loader</option>
+                                    <option value="dumper">Dumper</option>
                                 </select>
                             </div>
                             <div>

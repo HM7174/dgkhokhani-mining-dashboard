@@ -64,9 +64,20 @@ const createDriver = async (req, res) => {
 
 const updateDriver = async (req, res) => {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = { ...req.body };
+
+    // Sanitize data for PostgreSQL
+    const fieldsToSanitize = ['license_expiry', 'assigned_truck_id'];
+    fieldsToSanitize.forEach(field => {
+        if (updates[field] === '') {
+            updates[field] = null;
+        }
+    });
+
     if (updates.documents) {
-        updates.documents = JSON.stringify(updates.documents);
+        updates.documents = typeof updates.documents === 'string'
+            ? updates.documents
+            : JSON.stringify(updates.documents);
     }
 
     try {

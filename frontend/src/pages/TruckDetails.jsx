@@ -122,13 +122,32 @@ const TruckDetails = () => {
                     </button>
                     <h1 className="text-2xl font-bold text-slate-800">Vehicle Details</h1>
                 </div>
-                <button
-                    onClick={handleSave}
-                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors shadow-sm"
-                >
-                    <Save size={20} />
-                    <span>Save Changes</span>
-                </button>
+                <div className="flex items-center space-x-3">
+                    <button
+                        onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) {
+                                try {
+                                    await api.delete(`/trucks/${id}`);
+                                    navigate('/trucks');
+                                } catch (error) {
+                                    console.error('Error deleting vehicle:', error);
+                                    alert('Failed to delete vehicle');
+                                }
+                            }
+                        }}
+                        className="flex items-center space-x-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                        <Trash2 size={20} />
+                        <span>Delete</span>
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                        <Save size={20} />
+                        <span>Save Changes</span>
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

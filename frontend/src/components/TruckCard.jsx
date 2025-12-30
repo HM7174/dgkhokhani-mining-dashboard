@@ -1,9 +1,8 @@
-import React from 'react';
-import { Truck, Wrench, Navigation, AlertCircle } from 'lucide-react';
+import { Truck, Wrench, Navigation, Trash2 } from 'lucide-react';
 
-const TruckCard = ({ vehicle, onClick }) => {
+const TruckCard = ({ vehicle, onClick, onDelete }) => {
     const isTruck = vehicle.type === 'truck';
-    const StatusIcon = vehicle.status === 'active' ? Truck : AlertCircle;
+    const StatusIcon = vehicle.status === 'active' ? Truck : Trash2;
 
     return (
         <div
@@ -19,12 +18,26 @@ const TruckCard = ({ vehicle, onClick }) => {
                     }`}>
                     {isTruck ? <Truck size={24} /> : <Wrench size={24} />}
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${vehicle.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                    }`}>
-                    {vehicle.status}
-                </span>
+                <div className="flex items-center space-x-2">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this vehicle?')) {
+                                onDelete(vehicle.id);
+                            }
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Vehicle"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${vehicle.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
+                        {vehicle.status}
+                    </span>
+                </div>
             </div>
 
             {/* Registration Plate Style Display */}

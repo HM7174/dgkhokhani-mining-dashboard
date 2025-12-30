@@ -70,6 +70,16 @@ const TrucksPage = () => {
         return matchesType && matchesSearch;
     });
 
+    const handleDelete = async (id) => {
+        try {
+            await api.delete(`/trucks/${id}`);
+            fetchTrucks();
+        } catch (error) {
+            console.error('Error deleting vehicle:', error);
+            alert('Failed to delete vehicle');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -132,6 +142,7 @@ const TrucksPage = () => {
                             key={truck.id}
                             vehicle={truck}
                             onClick={handleCardClick}
+                            onDelete={handleDelete}
                         />
                     ))}
                 </div>

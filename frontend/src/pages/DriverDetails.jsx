@@ -23,16 +23,29 @@ const DriverDetails = () => {
         license_expiry: '',
         bank_name: '',
         bank_account_last4: '',
-        photo_url: '', // New field for photo
+        photo_url: '',
+        assigned_truck_id: '', // New field
         documents: []
     });
+
+    const [trucks, setTrucks] = useState([]); // Store all available trucks
 
     // Form state for new document
     const [newDoc, setNewDoc] = useState({ name: '', url: '', type: 'other' });
 
     useEffect(() => {
         fetchDriverDetails();
+        fetchTrucks(); // Load all trucks
     }, [id]);
+
+    const fetchTrucks = async () => {
+        try {
+            const response = await api.get('/trucks');
+            setTrucks(response.data);
+        } catch (error) {
+            console.error('Error fetching trucks:', error);
+        }
+    };
 
     const fetchDriverDetails = async () => {
         try {
@@ -61,7 +74,8 @@ const DriverDetails = () => {
                 license_expiry: data.license_expiry ? data.license_expiry.split('T')[0] : '',
                 bank_name: data.bank_name || '',
                 bank_account_last4: data.bank_account_last4 || '',
-                photo_url: data.photo_url || '', // Assuming backend might support this in future or we store in documents
+                photo_url: data.photo_url || '',
+                assigned_truck_id: data.assigned_truck_id || '', // Load assignment
                 documents: docs
             });
         } catch (error) {
@@ -174,10 +188,22 @@ const DriverDetails = () => {
                     {/* Quick Stats or Info */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                         <h3 className="font-semibold text-slate-800 mb-4">Assignment</h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div>
-                                <label className="text-xs text-slate-500 block">Current Vehicle</label>
-                                <p className="font-medium">{driver.assigned_truck_name || 'Unassigned'}</p>
+                                <label className="text-xs text-slate-500 block mb-1">Current Vehicle</label>
+                                <select
+                                    name="assigned_truck_id"
+                                    value={formData.assigned_truck_id}
+                                    onChange={handleInputChange}
+                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                >
+                                    <option value="">Unassigned</option>
+                                    {trucks.map(truck => (
+                                        <option key={truck.id} value={truck.id}>
+                                            {truck.name} ({truck.registration_number || 'No Plate'})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     </div>

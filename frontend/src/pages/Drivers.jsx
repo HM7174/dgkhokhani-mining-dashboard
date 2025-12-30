@@ -118,6 +118,7 @@ const DriversPage = () => {
                     <option value="All">All Posts</option>
                     <option value="Driver">Driver</option>
                     <option value="Operator">Operator</option>
+                    <option value="Helper">Helper</option>
                     <option value="Engineer">Engineer</option>
                     <option value="Supervisor">Supervisor</option>
                 </select>
@@ -177,6 +178,7 @@ const DriversPage = () => {
                             >
                                 <option value="Driver">Driver</option>
                                 <option value="Operator">Operator</option>
+                                <option value="Helper">Helper</option>
                                 <option value="Engineer">Engineer</option>
                                 <option value="Supervisor">Supervisor</option>
                             </select>
@@ -202,19 +204,22 @@ const DriversPage = () => {
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Assigned Vehicle</label>
-                        <select
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                            value={formData.assigned_truck_id}
-                            onChange={(e) => setFormData({ ...formData, assigned_truck_id: e.target.value })}
-                        >
-                            <option value="">Select Vehicle</option>
-                            {trucks.map(truck => (
-                                <option key={truck.id} value={truck.id}>{truck.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* Only show vehicle assignment for Driver, Operator, and Helper */}
+                    {formData.post !== 'Supervisor' && formData.post !== 'Engineer' && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Assigned Vehicle</label>
+                            <select
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                                value={formData.assigned_truck_id}
+                                onChange={(e) => setFormData({ ...formData, assigned_truck_id: e.target.value })}
+                            >
+                                <option value="">Select Vehicle</option>
+                                {trucks.map(truck => (
+                                    <option key={truck.id} value={truck.id}>{truck.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
                         <p>You can add detailed documents and bank information after creating the driver profile.</p>

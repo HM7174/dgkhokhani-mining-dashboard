@@ -85,17 +85,17 @@ const TrucksPage = () => {
 
             {/* Filters and Search Bar */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto">
-                    {['all', 'truck', 'machine'].map((type) => (
+                <div className="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto">
+                    {['all', 'truck', 'excavator', 'grader', 'roller'].map((type) => (
                         <button
                             key={type}
                             onClick={() => setFilterType(type)}
-                            className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-all flex-1 md:flex-none ${filterType === type
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
+                            className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-all flex-1 md:flex-none whitespace-nowrap ${filterType === type
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
-                            {type === 'all' ? 'All Vehicles' : type === 'truck' ? 'Trucks' : 'Machinery'}
+                            {type === 'all' ? 'All Vehicles' : type === 'truck' ? 'Trucks' : type.charAt(0).toUpperCase() + type.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -157,7 +157,9 @@ const TrucksPage = () => {
                             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                         >
                             <option value="truck">Truck</option>
-                            <option value="machine">Machine</option>
+                            <option value="excavator">Excavator</option>
+                            <option value="grader">Grader</option>
+                            <option value="roller">Roller</option>
                         </select>
                     </div>
                     <div>

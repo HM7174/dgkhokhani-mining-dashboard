@@ -220,7 +220,7 @@ const AttendancePage = () => {
                         onClick={async () => {
                             try {
                                 const token = localStorage.getItem('token');
-                                const response = await fetch(`${api.defaults.baseURL}/attendance/export`, {
+                                const response = await fetch(`${api.defaults.baseURL}/attendance/export?month=${currentMonth}&year=${currentYear}`, {
                                     headers: { Authorization: `Bearer ${token}` }
                                 });
                                 if (!response.ok) throw new Error('Download failed');

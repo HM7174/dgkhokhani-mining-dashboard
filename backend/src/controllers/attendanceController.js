@@ -329,121 +329,86 @@ const importExcel = async (req, res) => {
 
 const exportAttendance = async (req, res) => {
     try {
-        if (!fs.existsSync(EXCEL_PATH)) {
-            console.error('Attendance sheet template not found at:', EXCEL_PATH);
-            return res.status(404).json({ error: 'Attendance sheet template not found' });
-        }
+        const { month, year } = req.query;
+        const now = new Date();
+        const targetMonth = month ? parseInt(month) : now.getMonth();
+        const targetYear = year ? parseInt(year) : now.getFullYear();
 
-        const workbook = xlsx.readFile(EXCEL_PATH);
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
+        // 1. Fetch data
         const drivers = await db('drivers').where('employment_status', 'active').select('id', 'full_name');
 
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-
-        const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-        if (rows.length < 2) {
-            return res.status(400).json({ error: 'Excel sheet template is too short or invalid' });
-        }
-
-        let targetMonth = currentMonth;
-        let targetYear = currentYear;
-        const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-
-        // Find header row (the one containing 'NAME')
-        let headerRowIndex = -1;
-        let nameColIndex = -1;
-
-        for (let i = 0; i < Math.min(rows.length, 5); i++) {
-            const row = rows[i];
-            const idx = row.findIndex(c => typeof c === 'string' && c.toUpperCase().trim().includes('NAME'));
-            if (idx !== -1) {
-                headerRowIndex = i;
-                nameColIndex = idx;
-                break;
-            }
-        }
-
-        if (headerRowIndex === -1) {
-            headerRowIndex = 0;
-            nameColIndex = 1; // Fallback
-        }
-
-        const headerRow = rows[headerRowIndex];
-        headerRow.forEach(cell => {
-            if (typeof cell === 'string') {
-                const lower = cell.toLowerCase();
-                const foundMonth = months.findIndex(m => lower.includes(m));
-                if (foundMonth !== -1) targetMonth = foundMonth;
-                const yearMatch = lower.match(/20\d{2}/);
-                if (yearMatch) targetYear = parseInt(yearMatch[0]);
-            }
-        });
-
-        // Use local-friendly date range (start of month to end of month)
         const startOfMonth = new Date(targetYear, targetMonth, 1, 0, 0, 0);
         const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
 
-        const attendance = await db('attendance')
+        const attendanceRecords = await db('attendance')
             .whereBetween('date', [startOfMonth, endOfMonth])
             .select('*');
 
-        const dataMap = {};
-        attendance.forEach(r => {
-            const d = new Date(r.date).getDate();
-            if (!dataMap[r.driver_id]) dataMap[r.driver_id] = {};
-            dataMap[r.driver_id][d] = r.status;
+        const attendanceMap = {};
+        attendanceRecords.forEach(r => {
+            const day = new Date(r.date).getDate();
+            if (!attendanceMap[r.driver_id]) attendanceMap[r.driver_id] = {};
+            attendanceMap[r.driver_id][day] = r.status === 'present' ? 'P' : 'A';
         });
 
-        // Find day columns (look for row with numbers 1-28+)
-        let dayColMap = {};
-        let dayRowIndex = -1;
-        for (let i = headerRowIndex; i < Math.min(rows.length, headerRowIndex + 3); i++) {
-            const row = rows[i];
-            const hasDays = row.some(c => !isNaN(parseInt(c)) && parseInt(c) >= 1 && parseInt(c) <= 31);
-            if (hasDays) {
-                dayRowIndex = i;
-                row.forEach((cell, idx) => {
-                    const d = parseInt(cell);
-                    if (!isNaN(d) && d >= 1 && d <= 31) dayColMap[d] = idx;
-                });
-                break;
-            }
+        // 2. Prepare Excel Data
+        const excelData = [];
+
+        // Header Row 1: Title
+        const titleRow = [`D.G. KHOKHANI ATTENDANCE SHEET - ${monthNames[targetMonth]} ${targetYear}`];
+        excelData.push(titleRow);
+
+        // Header Row 2: Columns
+        const headers = ["S.NO", "DRIVER NAME"];
+        for (let d = 1; d <= daysInMonth; d++) {
+            headers.push(d);
         }
+        headers.push("TOTAL P", "TOTAL A");
+        excelData.push(headers);
 
-        let updatedCells = 0;
-        for (let r = headerRowIndex + 1; r < rows.length; r++) {
-            const row = rows[r];
-            if (!row) continue;
+        // Data Rows
+        drivers.forEach((driver, index) => {
+            const row = [index + 1, driver.full_name];
+            let totalP = 0;
+            let totalA = 0;
 
-            const nameInSheet = row[nameColIndex];
-            if (!nameInSheet || typeof nameInSheet !== 'string') continue;
-
-            const cleanNameInSheet = nameInSheet.toLowerCase().replace(/\s+/g, ' ').trim();
-            const driver = drivers.find(d => d.full_name.toLowerCase().replace(/\s+/g, ' ').trim() === cleanNameInSheet);
-
-            if (driver && dataMap[driver.id]) {
-                Object.keys(dataMap[driver.id]).forEach(dayStr => {
-                    const day = parseInt(dayStr);
-                    const status = dataMap[driver.id][day];
-                    const colIdx = dayColMap[day];
-
-                    if (typeof colIdx !== 'undefined') {
-                        const cellRef = xlsx.utils.encode_cell({ r: r, c: colIdx });
-                        worksheet[cellRef] = { t: 's', v: status === 'present' ? 'P' : 'A' };
-                        updatedCells++;
-                    }
-                });
+            for (let d = 1; d <= daysInMonth; d++) {
+                const status = attendanceMap[driver.id]?.[d] || "";
+                row.push(status);
+                if (status === 'P') totalP++;
+                if (status === 'A') totalA++;
             }
-        }
+            row.push(totalP, totalA);
+            excelData.push(row);
+        });
 
+        // 3. Create Workbook
+        const worksheet = xlsx.utils.aoa_to_sheet(excelData);
+
+        // Basic styling (column widths)
+        const colWidths = [
+            { wch: 5 },  // S.NO
+            { wch: 25 }, // NAME
+            ...Array(daysInMonth).fill({ wch: 3 }), // Days
+            { wch: 8 },  // TOTAL P
+            { wch: 8 }   // TOTAL A
+        ];
+        worksheet['!cols'] = colWidths;
+
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, "Attendance");
+
+        // 4. Send File
         const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-        res.setHeader('Content-Disposition', `attachment; filename="DG_KHOKHANI_ATTENDANCE_${months[targetMonth]}_${targetYear}.xlsx"`);
+        const fileName = `DG_KHOKHANI_ATTENDANCE_${monthNames[targetMonth]}_${targetYear}.xlsx`;
+
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.send(buffer);
+
     } catch (error) {
         console.error('Error exporting attendance:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });

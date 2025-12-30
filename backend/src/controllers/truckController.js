@@ -85,10 +85,27 @@ const createTruck = async (req, res) => {
 // Update truck
 const updateTruck = async (req, res) => {
     const { id } = req.params;
-    const updates = req.body;
+    let updates = { ...req.body };
+
+    // Sanitize data for PostgreSQL
+    // Dates and UUIDs shouldn't be empty strings
+    const fieldsToSanitize = ['puc_expiry', 'insurance_expiry', 'site_id'];
+    fieldsToSanitize.forEach(field => {
+        if (updates[field] === '') {
+            updates[field] = null;
+        }
+    });
+
     if (updates.documents) {
-        updates.documents = JSON.stringify(updates.documents);
+        updates.documents = typeof updates.documents === 'string'
+            ? updates.documents
+            : JSON.stringify(updates.documents);
     }
+
+    // Remove read-only or derived fields if they were sent
+    delete updates.id;
+    delete updates.created_at;
+    delete updates.site_name;
 
     try {
         const [updatedTruck] = await db('trucks')
@@ -103,7 +120,11 @@ const updateTruck = async (req, res) => {
         res.json(updatedTruck);
     } catch (error) {
         console.error('Error updating truck:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error.message,
+            code: error.code
+        });
     }
 };
 

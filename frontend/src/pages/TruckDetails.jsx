@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { ArrowLeft, Save, Truck, Wrench, Activity, MapPin, Calendar, FileText, Plus, Trash2, IndianRupee, NotebookPen } from 'lucide-react';
+import { ArrowLeft, Save, Truck, Wrench, Activity, MapPin, Calendar, FileText, Plus, Trash2, IndianRupee, Pencil } from 'lucide-react';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
 import { getFileUrl } from '../utils/urlHelper';
@@ -367,7 +367,7 @@ const TruckDetails = () => {
                     {/* Notes Section */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                         <h3 className="font-semibold text-slate-800 mb-4 border-b border-slate-100 pb-3 flex items-center gap-2">
-                            <NotebookPen size={18} className="text-blue-500" />
+                            <Pencil size={18} className="text-blue-500" />
                             Vehicle Notes
                         </h3>
                         <textarea

@@ -113,5 +113,6 @@ module.exports = {
     getSiteById,
     createSite,
     updateSite,
-    deleteSite
+    deleteSite,
+    restoreSite
 };

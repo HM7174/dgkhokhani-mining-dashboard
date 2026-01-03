@@ -179,5 +179,6 @@ module.exports = {
     getTruckById,
     createTruck,
     updateTruck,
-    deleteTruck
+    deleteTruck,
+    restoreTruck
 };

@@ -107,18 +107,26 @@ const DriverDetails = () => {
         }
     };
 
-    const handleAddDocument = () => {
-        if (!newDoc.name) return alert('Please enter document name');
+    const handleAddDocument = async () => {
+        if (!newDoc.name || !newDoc.url) return alert('Please enter document name and upload a file');
 
         const updatedDocs = [...formData.documents, { ...newDoc, id: Date.now() }];
-        setFormData(prev => ({ ...prev, documents: updatedDocs }));
-        setNewDoc({ name: '', url: '', type: 'other' });
-        setIsDocModalOpen(false);
 
-        // Auto-save or wait for manual save? Let's auto-save for documents to be safe
-        // Or better, just update local state and let user click "Save Changes" for everything?
-        // The prompt implies "Add new option with along Document add section", so maybe immediate?
-        // Let's stick to one "Save Changes" button for the whole profile to be atomic.
+        try {
+            // Immediately update the driver profile to persist the document
+            const updatedFormData = { ...formData, documents: updatedDocs };
+            await api.put(`/drivers/${id}`, updatedFormData);
+
+            setFormData(updatedFormData);
+            setNewDoc({ name: '', url: '', type: 'other' });
+            setIsDocModalOpen(false);
+            alert('Document added and saved successfully');
+        } catch (error) {
+            console.error('Error auto-saving document:', error);
+            alert('Document added to list but failed to save to server. Please click "Save Changes" manually.');
+            setFormData(prev => ({ ...prev, documents: updatedDocs }));
+            setIsDocModalOpen(false);
+        }
     };
 
     const handleDeleteDocument = (docId) => {

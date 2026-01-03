@@ -79,13 +79,26 @@ const TruckDetails = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleAddDocument = () => {
-        if (!newDoc.name) return alert('Please enter document name');
+    const handleAddDocument = async () => {
+        if (!newDoc.name || !newDoc.url) return alert('Please enter document name and upload a file');
 
         const updatedDocs = [...formData.documents, { ...newDoc, id: Date.now() }];
-        setFormData(prev => ({ ...prev, documents: updatedDocs }));
-        setNewDoc({ name: '', url: '', type: 'other' });
-        setIsDocModalOpen(false);
+
+        try {
+            // Immediately update the truck profile to persist the document
+            const updatedFormData = { ...formData, documents: updatedDocs };
+            await api.put(`/trucks/${id}`, updatedFormData);
+
+            setFormData(updatedFormData);
+            setNewDoc({ name: '', url: '', type: 'other' });
+            setIsDocModalOpen(false);
+            alert('Document added and saved successfully');
+        } catch (error) {
+            console.error('Error auto-saving document:', error);
+            alert('Document added to list but failed to save to server. Please click "Save Changes" manually.');
+            setFormData(prev => ({ ...prev, documents: updatedDocs }));
+            setIsDocModalOpen(false);
+        }
     };
 
     const handleDeleteDocument = (docId) => {

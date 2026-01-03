@@ -11,7 +11,8 @@ router.get('/:id', truckController.getTruckById);
 
 // Admin or Site Manager only
 router.post('/', authorizeRoles('admin', 'site_manager'), truckController.createTruck);
-router.put('/:id', authorizeRoles('admin', 'site_manager'), truckController.updateTruck);
-router.delete('/:id', authorizeRoles('admin'), truckController.deleteTruck);
+router.put('/:id', authenticateToken, authorizeRoles('admin', 'dispatch'), truckController.updateTruck);
+router.delete('/:id', authenticateToken, authorizeRoles('admin'), truckController.deleteTruck);
+router.post('/:id/restore', authenticateToken, authorizeRoles('admin'), truckController.restoreTruck);
 
 module.exports = router;

@@ -2,25 +2,30 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
-import { LayoutDashboard, Truck, Users as DriversIcon, MapPin, Fuel, CalendarCheck, LogOut, ShieldAlert, UserCog, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { LayoutDashboard, Truck, Users as DriversIcon, MapPin, Fuel, CalendarCheck, LogOut, ShieldAlert, UserCog, ChevronLeft, ChevronRight, X, Archive } from 'lucide-react';
 
 const Sidebar = ({ isOpen, isCollapsed, onToggle, isMobile, onMobileClose }) => {
-    const { logout, user } = useAuth();
     const location = useLocation();
+    const { user, logout } = useAuth();
 
-    const navItems = [
-        { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-        { label: 'Trucks & Machines', path: '/trucks', icon: Truck },
-        { label: 'Drivers', path: '/drivers', icon: DriversIcon },
-        { label: 'Sites', path: '/sites', icon: MapPin },
-        { label: 'Fuel Logs', path: '/fuel', icon: Fuel },
-        { label: 'Attendance', path: '/attendance', icon: CalendarCheck },
+    const menuItems = [
+        { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+        { path: '/sites', icon: MapPin, label: 'Sites' },
+        { path: '/trucks', icon: Truck, label: 'Trucks & Machines' },
+        { path: '/drivers', icon: DriversIcon, label: 'Drivers' },
+        { path: '/fuel', icon: Fuel, label: 'Fuel Logs' },
+        { path: '/attendance', icon: CalendarCheck, label: 'Attendance' },
+        { path: '/archive', icon: Archive, label: 'Completed Sites' },
+        { path: '/users', icon: UserCog, label: 'User Management', roles: ['admin'] },
+        { path: '/audit', icon: ShieldAlert, label: 'Audit Logs', roles: ['admin'] },
     ];
 
-    if (user?.role === 'admin') {
-        navItems.push({ label: 'Users', path: '/users', icon: UserCog });
-        navItems.push({ label: 'Audit Logs', path: '/audit', icon: ShieldAlert });
-    }
+    const filteredMenuItems = menuItems.filter(item => {
+        if (item.roles) {
+            return item.roles.includes(user?.role);
+        }
+        return true;
+    });
 
     const sidebarContent = (
         <div className={clsx(
@@ -55,7 +60,7 @@ const Sidebar = ({ isOpen, isCollapsed, onToggle, isMobile, onMobileClose }) => 
 
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                {navItems.map((item) => {
+                {filteredMenuItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
                     return (

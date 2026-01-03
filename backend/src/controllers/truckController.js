@@ -2,7 +2,7 @@ const db = require('../db/db');
 
 // Get all trucks with optional filters
 const getAllTrucks = async (req, res) => {
-    const { type, status, site_id } = req.query;
+    const { type, status, site_id, include_archived } = req.query;
 
     try {
         let query = db('trucks')
@@ -20,6 +20,10 @@ const getAllTrucks = async (req, res) => {
         }
         if (site_id) {
             query = query.where('trucks.site_id', site_id);
+        }
+
+        if (include_archived !== 'true') {
+            query = query.where('trucks.is_archived', false);
         }
 
         const trucks = await query;
@@ -55,7 +59,7 @@ const getTruckById = async (req, res) => {
 const createTruck = async (req, res) => {
     const {
         name, type, registration_number, puc_expiry, insurance_expiry,
-        insurance_provider, gps_device_id, site_id, status, documents
+        insurance_provider, gps_device_id, site_id, status, documents, notes
     } = req.body;
 
     try {
@@ -69,7 +73,9 @@ const createTruck = async (req, res) => {
             gps_device_id,
             site_id,
             status: status || 'active',
-            documents: JSON.stringify(documents || [])
+            documents: JSON.stringify(documents || []),
+            notes: notes || '',
+            is_archived: false
         }).returning('*');
 
         res.status(201).json(newTruck);
@@ -132,15 +138,38 @@ const updateTruck = async (req, res) => {
 const deleteTruck = async (req, res) => {
     const { id } = req.params;
     try {
-        const deletedCount = await db('trucks').where({ id }).del();
+        // Soft delete: mark as archived
+        const updatedCount = await db('trucks')
+            .where({ id })
+            .update({
+                is_archived: true,
+                site_id: null // Unassign from site when archived
+            });
 
-        if (deletedCount === 0) {
+        if (updatedCount === 0) {
             return res.status(404).json({ error: 'Truck not found' });
         }
 
-        res.json({ message: 'Truck deleted successfully' });
+        res.json({ message: 'Truck archived successfully' });
     } catch (error) {
-        console.error('Error deleting truck:', error);
+        console.error('Error archiving truck:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+const restoreTruck = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const updatedCount = await db('trucks')
+            .where({ id })
+            .update({ is_archived: false });
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ error: 'Truck not found' });
+        }
+        res.json({ message: 'Truck restored successfully' });
+    } catch (error) {
+        console.error('Error restoring truck:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

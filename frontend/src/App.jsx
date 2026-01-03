@@ -14,6 +14,7 @@ import FuelPage from './pages/Fuel';
 import AttendancePage from './pages/Attendance';
 import AuditLogsPage from './pages/AuditLogs';
 import UsersPage from './pages/Users';
+import ArchivePage from './pages/Archive';
 
 function App() {
     return (
@@ -34,6 +35,7 @@ function App() {
                             <Route path="/attendance" element={<AttendancePage />} />
                             <Route path="/users" element={<UsersPage />} />
                             <Route path="/audit" element={<AuditLogsPage />} />
+                            <Route path="/archive" element={<ArchivePage />} />
                         </Route>
                     </Route>
                 </Routes>

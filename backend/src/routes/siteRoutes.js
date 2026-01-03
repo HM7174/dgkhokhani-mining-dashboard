@@ -9,7 +9,8 @@ router.get('/', siteController.getAllSites);
 router.get('/:id', siteController.getSiteById);
 
 router.post('/', authorizeRoles('admin'), siteController.createSite);
-router.put('/:id', authorizeRoles('admin'), siteController.updateSite);
-router.delete('/:id', authorizeRoles('admin'), siteController.deleteSite);
+router.put('/:id', authenticateToken, authorizeRoles('admin', 'site_manager'), siteController.updateSite);
+router.delete('/:id', authenticateToken, authorizeRoles('admin'), siteController.deleteSite);
+router.post('/:id/restore', authenticateToken, authorizeRoles('admin'), siteController.restoreSite);
 
 module.exports = router;

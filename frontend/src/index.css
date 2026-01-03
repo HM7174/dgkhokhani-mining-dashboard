@@ -14,3 +14,12 @@
   height: 100%;
   z-index: 0;
 }
+
+/* Sidebar transitions */
+.sidebar-transition {
+  transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.content-transition {
+  transition: padding-left 0.3s ease-in-out;
+}

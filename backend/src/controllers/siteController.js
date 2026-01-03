@@ -2,7 +2,11 @@ const db = require('../db/db');
 
 const getAllSites = async (req, res) => {
     try {
-        const sites = await db('sites').select('*');
+        const sites = await db('sites')
+            .leftJoin('trucks', 'sites.id', 'trucks.site_id')
+            .select('sites.*')
+            .count('trucks.id as vehicle_count')
+            .groupBy('sites.id');
         res.json(sites);
     } catch (error) {
         console.error('Error fetching sites:', error);

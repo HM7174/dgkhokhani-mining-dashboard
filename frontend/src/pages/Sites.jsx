@@ -3,12 +3,16 @@ import api from '../services/api';
 import Table from '../components/Table';
 import Modal from '../components/Modal';
 
-import { Plus, Edit, Trash2, Search, MapPin, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, MapPin, Loader2, Eye, Truck } from 'lucide-react';
 
 const SitesPage = () => {
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedSiteDetails, setSelectedSiteDetails] = useState(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
     const [formData, setFormData] = useState({
         name: '', site_manager: '', location_lat: '', location_lng: ''
     });
@@ -29,6 +33,21 @@ const SitesPage = () => {
             console.error('Error fetching sites:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleViewDetails = async (siteId) => {
+        setLoadingDetails(true);
+        setIsDetailsModalOpen(true);
+        try {
+            const response = await api.get(`/sites/${siteId}`);
+            setSelectedSiteDetails(response.data);
+        } catch (error) {
+            console.error('Error fetching site details:', error);
+            alert('Failed to load site details');
+            setIsDetailsModalOpen(false);
+        } finally {
+            setLoadingDetails(false);
         }
     };
 
@@ -106,15 +125,28 @@ const SitesPage = () => {
     const columns = [
         { header: 'Site Name', accessor: 'name' },
         { header: 'Manager', accessor: 'site_manager' },
+        {
+            header: 'Vehicles',
+            accessor: 'vehicle_count',
+            render: (row) => (
+                <div className="flex items-center space-x-1 text-blue-600 font-medium">
+                    <Truck size={16} />
+                    <span>{row.vehicle_count || 0}</span>
+                </div>
+            )
+        },
         { header: 'Location', accessor: 'location', render: (row) => row.location_lat && row.location_lng ? `${row.location_lat}, ${row.location_lng}` : 'N/A' },
         {
             header: 'Actions',
             render: (row) => (
-                <div className="flex space-x-2">
-                    <button onClick={() => handleEdit(row)} className="text-blue-600 hover:text-blue-800">
+                <div className="flex space-x-3">
+                    <button onClick={() => handleViewDetails(row.id)} className="text-blue-600 hover:text-blue-800 transition-colors" title="View Allocation">
+                        <Eye size={18} />
+                    </button>
+                    <button onClick={() => handleEdit(row)} className="text-slate-600 hover:text-slate-800 transition-colors" title="Edit Site">
                         <Edit size={18} />
                     </button>
-                    <button onClick={() => handleDelete(row.id)} className="text-red-600 hover:text-red-800">
+                    <button onClick={() => handleDelete(row.id)} className="text-red-600 hover:text-red-800 transition-colors" title="Delete Site">
                         <Trash2 size={18} />
                     </button>
                 </div>
@@ -125,14 +157,17 @@ const SitesPage = () => {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-slate-800">Sites</h1>
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800">Sites</h1>
+                    <p className="text-sm text-slate-500">Manage mining locations and vehicle allocations</p>
+                </div>
                 <button
                     onClick={() => {
                         setEditingSite(null);
                         setFormData({ name: '', site_manager: '', location_lat: '', location_lng: '' });
                         setIsModalOpen(true);
                     }}
-                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
                 >
                     <Plus size={20} />
                     <span>Add Site</span>
@@ -140,10 +175,75 @@ const SitesPage = () => {
             </div>
 
             {loading ? (
-                <div className="text-center py-10">Loading...</div>
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="animate-spin text-blue-500" size={32} />
+                </div>
             ) : (
-                <Table columns={columns} data={sites} />
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <Table columns={columns} data={sites} />
+                </div>
             )}
+
+            {/* Site Details Modal */}
+            <Modal isOpen={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} title="Site Allocation Details">
+                {loadingDetails ? (
+                    <div className="flex items-center justify-center py-10">
+                        <Loader2 className="animate-spin text-blue-500" size={24} />
+                    </div>
+                ) : selectedSiteDetails && (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4 pb-4 border-b border-slate-100">
+                            <div>
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Site Name</label>
+                                <p className="text-slate-800 font-medium">{selectedSiteDetails.name}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Manager</label>
+                                <p className="text-slate-800 font-medium">{selectedSiteDetails.site_manager || 'Not Assigned'}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    <Truck size={16} className="text-blue-500" />
+                                    Allocated Vehicles ({selectedSiteDetails.trucks?.length || 0})
+                                </h3>
+                            </div>
+
+                            {!selectedSiteDetails.trucks || selectedSiteDetails.trucks.length === 0 ? (
+                                <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                                    <Truck size={32} className="mx-auto text-slate-300 mb-2" />
+                                    <p className="text-slate-500 text-sm">No vehicles assigned to this site</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                                    {selectedSiteDetails.trucks.map(truck => (
+                                        <div key={truck.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                                            <div className="flex items-center space-x-3">
+                                                <div className={`p-2 rounded-lg ${truck.type === 'truck' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                    <Truck size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-slate-800">{truck.name}</p>
+                                                    <p className="text-xs text-slate-500 font-mono">{truck.registration_number}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${truck.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                    }`}>
+                                                    {truck.status}
+                                                </span>
+                                                <p className="text-[10px] text-slate-400 mt-0.5 capitalize">{truck.type}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </Modal>
 
             <Modal isOpen={isModalOpen} onClose={() => {
                 setIsModalOpen(false);

@@ -46,8 +46,10 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/fleet', fleetRoutes);
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+const fileFallback = require('./middleware/fileFallback');
+
+// Serve uploaded files with database fallback
+app.get('/uploads/:filename', fileFallback);
 
 app.get('/', (req, res) => {
     res.json({ message: 'D.G.Khokhani API is running' });

@@ -81,29 +81,9 @@ router.post('/', upload.single('file'), async (req, res) => {
     }
 });
 
+const fileFallback = require('../middleware/fileFallback');
+
 // Raw file retrieval endpoint
-router.get('/raw/:filename', async (req, res) => {
-    const { filename } = req.params;
-
-    try {
-        // Try to find in database
-        const fileRecord = await db('file_store').where({ filename }).first();
-
-        if (!fileRecord) {
-            // Fallback to local file if not in DB (legacy or upload error)
-            const filePath = path.join(__dirname, '../../uploads', filename);
-            if (fs.existsSync(filePath)) {
-                return res.sendFile(filePath);
-            }
-            return res.status(404).json({ error: 'File not found' });
-        }
-
-        res.set('Content-Type', fileRecord.mimetype);
-        res.send(fileRecord.data);
-    } catch (error) {
-        console.error('Error retrieving file:', error);
-        res.status(500).json({ error: 'Error retrieving file' });
-    }
-});
+router.get('/raw/:filename', fileFallback);
 
 module.exports = router;
